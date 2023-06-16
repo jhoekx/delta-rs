@@ -36,8 +36,9 @@ use arrow_array::StringArray;
 use arrow_schema::Field;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use datafusion::datasource::datasource::TableProviderFactory;
 use datafusion::datasource::file_format::{parquet::ParquetFormat, FileFormat};
+use datafusion::datasource::physical_plan::FileScanConfig;
+use datafusion::datasource::provider::TableProviderFactory;
 use datafusion::datasource::{listing::PartitionedFile, MemTable, TableProvider, TableType};
 use datafusion::execution::context::{SessionContext, SessionState, TaskContext};
 use datafusion::execution::runtime_env::RuntimeEnv;
@@ -45,7 +46,6 @@ use datafusion::execution::FunctionRegistry;
 use datafusion::optimizer::utils::conjunction;
 use datafusion::physical_expr::PhysicalSortExpr;
 use datafusion::physical_optimizer::pruning::{PruningPredicate, PruningStatistics};
-use datafusion::physical_plan::file_format::FileScanConfig;
 use datafusion::physical_plan::filter::FilterExec;
 use datafusion::physical_plan::limit::LocalLimitExec;
 use datafusion::physical_plan::{
@@ -1377,7 +1377,6 @@ mod tests {
     use arrow::array::StructArray;
     use arrow::datatypes::{DataType, Field, Schema};
     use chrono::{TimeZone, Utc};
-    use datafusion::from_slice::FromSlice;
     use datafusion::physical_plan::empty::EmptyExec;
     use datafusion_proto::physical_plan::AsExecutionPlan;
     use datafusion_proto::protobuf;
@@ -1555,9 +1554,10 @@ mod tests {
         let file = partitioned_file_from_action(&action, &schema);
         let ref_file = PartitionedFile {
             object_meta: object_store::ObjectMeta {
-                location: Path::from("year=2015/month=1/part-00000-4dcb50d3-d017-450c-9df7-a7257dbd3c5d-c000.snappy.parquet".to_string()), 
+                location: Path::from("year=2015/month=1/part-00000-4dcb50d3-d017-450c-9df7-a7257dbd3c5d-c000.snappy.parquet".to_string()),
                 last_modified: Utc.timestamp_millis_opt(1660497727833).unwrap(),
                 size: 10644,
+                e_tag: None,
             },
             partition_values: [ScalarValue::Int64(Some(2015)), ScalarValue::Int64(Some(1))].to_vec(),
             range: None,
@@ -1575,8 +1575,10 @@ mod tests {
         let batch = RecordBatch::try_new(
             Arc::clone(&schema),
             vec![
-                Arc::new(arrow::array::StringArray::from_slice(["a", "b", "c", "d"])),
-                Arc::new(arrow::array::Int32Array::from_slice([1, 10, 10, 100])),
+                Arc::new(arrow::array::StringArray::from_iter_values([
+                    "a", "b", "c", "d",
+                ])),
+                Arc::new(arrow::array::Int32Array::from_iter_values([1, 10, 10, 100])),
             ],
         )
         .unwrap();

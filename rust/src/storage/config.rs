@@ -153,10 +153,11 @@ fn try_configure_gcs(
     storage_url: &Url,
     options: &StorageOptions,
 ) -> DeltaResult<Arc<DynObjectStore>> {
-    let store = GoogleCloudStorageBuilder::from_env()
-        .with_url(storage_url.as_ref())
-        .try_with_options(&options.as_gcs_options())?
-        .build()?;
+    let mut builder = GoogleCloudStorageBuilder::from_env().with_url(storage_url.as_ref());
+    for (key, value) in options.as_gcs_options() {
+        builder = builder.with_config(key, value);
+    }
+    let store = builder.build()?;
     url_prefix_handler(store, storage_url)
 }
 
@@ -176,11 +177,13 @@ fn try_configure_azure(
     storage_url: &Url,
     options: &StorageOptions,
 ) -> DeltaResult<Arc<DynObjectStore>> {
-    let store = MicrosoftAzureBuilder::from_env()
+    let mut builder = MicrosoftAzureBuilder::from_env()
         .with_url(storage_url.as_ref())
-        .try_with_options(&options.as_azure_options())?
-        .with_allow_http(options.allow_http())
-        .build()?;
+        .with_allow_http(options.allow_http());
+    for (key, value) in options.as_azure_options() {
+        builder = builder.with_config(key, value);
+    }
+    let store = builder.build()?;
     url_prefix_handler(store, storage_url)
 }
 
@@ -200,11 +203,13 @@ fn try_configure_s3(
     storage_url: &Url,
     options: &StorageOptions,
 ) -> DeltaResult<Arc<DynObjectStore>> {
-    let amazon_s3 = AmazonS3Builder::from_env()
+    let mut builder = AmazonS3Builder::from_env()
         .with_url(storage_url.as_ref())
-        .try_with_options(&options.as_s3_options())?
-        .with_allow_http(options.allow_http())
-        .build()?;
+        .with_allow_http(options.allow_http());
+    for (key, value) in options.as_s3_options() {
+        builder = builder.with_config(key, value);
+    }
+    let amazon_s3 = builder.build()?;
     let store =
         S3StorageBackend::try_new(Arc::new(amazon_s3), S3StorageOptions::from_map(&options.0))?;
     url_prefix_handler(store, storage_url)
