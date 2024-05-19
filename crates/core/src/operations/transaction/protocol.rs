@@ -67,8 +67,15 @@ impl ProtocolChecker {
         1
     }
 
+    #[cfg(feature = "datafusion")]
+    // Invariants (required for version 2) requires datafusion
     pub fn default_writer_version(&self) -> i32 {
         2
+    }
+
+    #[cfg(not(feature = "datafusion"))]
+    pub fn default_writer_version(&self) -> i32 {
+        1
     }
 
     /// Check append-only at the high level (operation level)
